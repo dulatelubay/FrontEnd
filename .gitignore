@@ -1,0 +1,30 @@
+# ── Frontend ──────────────────────────────────────────────────────────────────
+digital-trainer/node_modules/
+digital-trainer/dist/
+digital-trainer/.env
+digital-trainer/.env.local
+
+# ── Backend ───────────────────────────────────────────────────────────────────
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/src/main/resources/application-local.properties
+
+# ── AI microservice ───────────────────────────────────────────────────────────
+ai-microservice/.env
+ai-microservice/venv/
+ai-microservice/__pycache__/
+ai-microservice/**/__pycache__/
+ai-microservice/**/*.pyc
+ai-microservice/data/model.pkl
+ai-microservice/logs/
+
+# ── IDEs ──────────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.suo
+*.user
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

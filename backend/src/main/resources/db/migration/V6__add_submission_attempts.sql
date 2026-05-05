@@ -1,0 +1,1 @@
+ALTER TABLE task_submissions ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0;

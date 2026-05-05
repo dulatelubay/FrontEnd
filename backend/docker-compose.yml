@@ -1,0 +1,11 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8084:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp:/tmp
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080  # override the port inside container
