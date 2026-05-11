@@ -27,6 +27,13 @@ public class UserService {
                    .toList();
     }
 
+    public List<UserResponse> getAll() {
+        return repo.findAllByOrderByNameAsc()
+                   .stream()
+                   .map(UserResponse::new)
+                   .toList();
+    }
+
     public UserResponse create(CreateUserRequest req, Role role) {
         if (repo.existsByEmail(req.getEmail().trim().toLowerCase())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");

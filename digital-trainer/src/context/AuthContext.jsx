@@ -113,57 +113,8 @@ export function AuthProvider({ children }) {
         return res
     }
 
-    // Kept as mock until the admin/user management API is built
-    const SEED_USERS = [
-        { id: 1, name: 'Администратор', email: 'admin@trainer.kz', password: 'admin123', role: 'admin' },
-        { id: 2, name: 'Айгерим Серикқызы', email: 'aigerim@school.kz', password: 'teacher123', role: 'teacher' },
-        { id: 3, name: 'Алия Нурланова', email: 'aliya@school.kz', password: 'student123', role: 'student' },
-    ]
-
-    const [users, setUsers] = useState(() => {
-        try {
-            const saved = localStorage.getItem('mockUsers')
-            if (saved) return JSON.parse(saved)
-        } catch {}
-        return SEED_USERS
-    })
-
-    useEffect(() => {
-        try {
-            localStorage.setItem('mockUsers', JSON.stringify(users))
-        } catch {}
-    }, [users])
-
-    function addUser(newUser) {
-        const email = newUser.email.trim().toLowerCase()
-        const name = newUser.name.trim()
-        const password = newUser.password.trim()
-        const role = newUser.role
-
-        if (!name || !email || !password || !role) {
-            return { success: false, error: 'Заполните все поля' }
-        }
-
-        if (users.some(account => account.email.toLowerCase() === email)) {
-            return { success: false, error: 'Пользователь с таким email уже есть' }
-        }
-
-        const account = { id: Date.now(), name, email, password, role }
-        setUsers(prev => [...prev, account])
-        return { success: true, user: account }
-    }
-
-    function deleteUser(id) {
-        const target = users.find(account => account.id === id)
-        if (target && user?.email && target.email.toLowerCase() === user.email.toLowerCase()) {
-            return { success: false, error: 'Нельзя удалить текущий аккаунт' }
-        }
-        setUsers(prev => prev.filter(account => account.id !== id))
-        return { success: true }
-    }
-
     return (
-        <AuthContext.Provider value={{ user, accessToken, loading, authFetch, users, login, logout, addUser, deleteUser }}>
+        <AuthContext.Provider value={{ user, accessToken, loading, authFetch, login, logout }}>
             {children}
         </AuthContext.Provider>
     )

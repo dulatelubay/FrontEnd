@@ -20,8 +20,20 @@ public class UserController {
     private final UserService service;
 
     @GetMapping
-    public List<UserResponse> list(@RequestParam(defaultValue = "STUDENT") String role) {
+    public List<UserResponse> list(@RequestParam(required = false) String role) {
+        if (role == null || role.isBlank() || role.equalsIgnoreCase("all")) {
+            return service.getAll();
+        }
         return service.getByRole(Role.valueOf(role.toUpperCase()));
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public UserResponse create(@Valid @RequestBody CreateUserRequest req) {
+        Role role = (req.getRole() == null || req.getRole().isBlank())
+                ? Role.STUDENT
+                : Role.valueOf(req.getRole().toUpperCase());
+        return service.create(req, role);
     }
 
     @PostMapping("/students")
