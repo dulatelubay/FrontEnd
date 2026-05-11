@@ -286,7 +286,7 @@ export default function AdminPanel() {
                                         const meta = roleMeta[account.role]
                                         const roleColor = isDark ? meta.darkColor : meta.color
                                         const roleBg = isDark ? meta.darkBg : meta.bg
-                                        const isCurrent = user?.id === account.id
+                                        const isCurrent = user?.email?.toLowerCase() === account.email.toLowerCase()
 
                                         return (
                                             <tr key={account.id}>

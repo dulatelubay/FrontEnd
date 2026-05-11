@@ -114,7 +114,25 @@ export function AuthProvider({ children }) {
     }
 
     // Kept as mock until the admin/user management API is built
-    const [users, setUsers] = useState([])
+    const SEED_USERS = [
+        { id: 1, name: 'Администратор', email: 'admin@trainer.kz', password: 'admin123', role: 'admin' },
+        { id: 2, name: 'Айгерим Серикқызы', email: 'aigerim@school.kz', password: 'teacher123', role: 'teacher' },
+        { id: 3, name: 'Алия Нурланова', email: 'aliya@school.kz', password: 'student123', role: 'student' },
+    ]
+
+    const [users, setUsers] = useState(() => {
+        try {
+            const saved = localStorage.getItem('mockUsers')
+            if (saved) return JSON.parse(saved)
+        } catch {}
+        return SEED_USERS
+    })
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('mockUsers', JSON.stringify(users))
+        } catch {}
+    }, [users])
 
     function addUser(newUser) {
         const email = newUser.email.trim().toLowerCase()
@@ -136,7 +154,8 @@ export function AuthProvider({ children }) {
     }
 
     function deleteUser(id) {
-        if (user?.id === id) {
+        const target = users.find(account => account.id === id)
+        if (target && user?.email && target.email.toLowerCase() === user.email.toLowerCase()) {
             return { success: false, error: 'Нельзя удалить текущий аккаунт' }
         }
         setUsers(prev => prev.filter(account => account.id !== id))
