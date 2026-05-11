@@ -32,7 +32,6 @@ const studentNav = [
 // Пункты для админа
 const adminNav = [
     { to: '/admin',   label: 'Панель управления', icon: '🔧', end: true },
-    { to: '/',        label: 'Учительская',        icon: '👩‍🏫' },
 ]
 
 export default function Sidebar() {
@@ -68,7 +67,7 @@ export default function Sidebar() {
     // Определяем какое меню показывать
     const role = user?.role || 'teacher'
     const mainNav   = role === 'student' ? studentNav : role === 'admin' ? adminNav : teacherNav
-    const extraNav  = role === 'teacher' || role === 'admin' ? teacherOnly : []
+    const extraNav  = role === 'teacher' ? teacherOnly : []
 
     // Метка роли
     const roleLabel = { admin: 'Администратор', teacher: 'Учитель', student: 'Ученик' }

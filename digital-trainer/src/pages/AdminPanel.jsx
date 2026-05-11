@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { themes } from '../styles/themes'
@@ -55,6 +55,17 @@ export default function AdminPanel() {
     const [form, setForm] = useState(emptyForm)
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
+    const [filter, setFilter] = useState('all')
+
+    const roleOrder = { teacher: 0, admin: 1, student: 2 }
+    const filteredUsers = users
+        .filter(account => filter === 'all' || account.role === filter)
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+
+    const groupedRoles = filter === 'all'
+        ? ['teacher', 'admin', 'student'].filter(r => filteredUsers.some(u => u.role === r))
+        : [filter]
 
     const totalByRole = {
         admin: users.filter(account => account.role === 'admin').length,
@@ -255,9 +266,39 @@ export default function AdminPanel() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: 10,
                         }}>
                             <h2 style={{ margin: 0, fontSize: 15, color: t.text }}>Все пользователи</h2>
-                            <span style={{ fontSize: 12, color: t.textSecondary }}>{users.length} аккаунта</span>
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                {[
+                                    { key: 'all', label: `Все (${users.length})` },
+                                    { key: 'teacher', label: `Учителя (${totalByRole.teacher})` },
+                                    { key: 'student', label: `Ученики (${totalByRole.student})` },
+                                    { key: 'admin', label: `Админы (${totalByRole.admin})` },
+                                ].map(chip => {
+                                    const active = filter === chip.key
+                                    return (
+                                        <button
+                                            key={chip.key}
+                                            type="button"
+                                            onClick={() => setFilter(chip.key)}
+                                            style={{
+                                                padding: '6px 11px',
+                                                borderRadius: 999,
+                                                border: `1px solid ${active ? accent : t.border}`,
+                                                background: active ? accent : 'transparent',
+                                                color: active ? '#fff' : t.textSecondary,
+                                                fontSize: 12,
+                                                fontWeight: 500,
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            {chip.label}
+                                        </button>
+                                    )
+                                })}
+                            </div>
                         </div>
 
                         <div style={{ overflowX: 'auto' }}>
@@ -282,7 +323,50 @@ export default function AdminPanel() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {users.map(account => {
+                                    {filteredUsers.length === 0 && (
+                                        <tr>
+                                            <td colSpan={5} style={{
+                                                padding: '24px 14px',
+                                                textAlign: 'center',
+                                                color: t.textSecondary,
+                                                fontSize: 13,
+                                            }}>
+                                                Нет пользователей в этой группе
+                                            </td>
+                                        </tr>
+                                    )}
+                                    {groupedRoles.map(roleKey => {
+                                        const groupUsers = filteredUsers.filter(u => u.role === roleKey)
+                                        if (groupUsers.length === 0) return null
+                                        const groupMeta = roleMeta[roleKey]
+                                        const groupColor = isDark ? groupMeta.darkColor : groupMeta.color
+
+                                        return (
+                                            <Fragment key={roleKey}>
+                                                {filter === 'all' && (
+                                                    <tr>
+                                                        <td colSpan={5} style={{
+                                                            padding: '10px 14px',
+                                                            background: isDark ? '#13141F' : '#F8FAFC',
+                                                            borderBottom: `1px solid ${t.border}`,
+                                                            color: groupColor,
+                                                            fontSize: 11,
+                                                            fontWeight: 700,
+                                                            textTransform: 'uppercase',
+                                                            letterSpacing: '0.07em',
+                                                        }}>
+                                                            {groupMeta.short === 'Админ' ? 'Администраторы' : groupMeta.short === 'Учитель' ? 'Учителя' : 'Ученики'}
+                                                            <span style={{
+                                                                marginLeft: 8,
+                                                                color: t.textSecondary,
+                                                                fontWeight: 500,
+                                                            }}>
+                                                                {groupUsers.length}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                {groupUsers.map(account => {
                                         const meta = roleMeta[account.role]
                                         const roleColor = isDark ? meta.darkColor : meta.color
                                         const roleBg = isDark ? meta.darkBg : meta.bg
@@ -357,6 +441,9 @@ export default function AdminPanel() {
                                                     </button>
                                                 </td>
                                             </tr>
+                                        )
+                                    })}
+                                            </Fragment>
                                         )
                                     })}
                                 </tbody>
