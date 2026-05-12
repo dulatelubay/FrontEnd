@@ -108,7 +108,8 @@ export default function StudentDashboard() {
         return {
             id: task.id,
             title: task.title,
-            topic: task.topicTitle || '',
+            topic: task.topic || '',
+            topicId: task.topicId,
             status: sub ? sub.status : 'new',
             grade,
         }
@@ -125,8 +126,8 @@ export default function StudentDashboard() {
     // По темам — берём для каждой темы лучший балл из задач этой темы.
     const myTopics = topics.map(topic => {
         const scoresForTopic = myTasks
-            .filter(t => t.topic === topic.title && t.grade != null)
-            .map(t => t.grade)
+            .filter(task => (task.topicId === topic.id || task.topic === topic.title) && task.grade != null)
+            .map(task => task.grade)
         const score = scoresForTopic.length > 0 ? Math.max(...scoresForTopic) : null
         return { name: topic.title, done: score != null, score }
     })
