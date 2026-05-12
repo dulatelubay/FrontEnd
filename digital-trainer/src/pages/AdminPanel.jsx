@@ -33,6 +33,7 @@ const emptyForm = {
     email: '',
     password: '',
     role: 'student',
+    classGroup: '',
 }
 
 function getInitials(name) {
@@ -59,6 +60,9 @@ export default function AdminPanel() {
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
     const [filter, setFilter] = useState('all')
+    const [editing, setEditing] = useState(null) // {id, name, email, password, role, classGroup}
+    const [editError, setEditError] = useState('')
+    const [editSaving, setEditSaving] = useState(false)
 
     const loadUsers = useCallback(async () => {
         setLoading(true)
@@ -118,9 +122,18 @@ export default function AdminPanel() {
 
         setSubmitting(true)
         try {
+            const payload = {
+                name,
+                email,
+                password,
+                role: form.role.toUpperCase(),
+            }
+            if (form.role === 'student' && form.classGroup.trim()) {
+                payload.classGroup = form.classGroup.trim()
+            }
             const res = await authFetch('/api/users', {
                 method: 'POST',
-                body: JSON.stringify({ name, email, password, role: form.role.toUpperCase() }),
+                body: JSON.stringify(payload),
             })
             if (res.status === 409) {
                 setError('Пользователь с таким email уже есть')
@@ -156,6 +169,72 @@ export default function AdminPanel() {
             await loadUsers()
         } catch (e) {
             setError('Ошибка соединения с сервером')
+        }
+    }
+
+    function openEdit(account) {
+        setEditError('')
+        setMessage('')
+        setEditing({
+            id: account.id,
+            name: account.name,
+            email: account.email,
+            password: '',
+            role: account.role,
+            classGroup: account.group || '',
+        })
+    }
+
+    function handleEditChange(event) {
+        const { name, value } = event.target
+        setEditing(prev => ({ ...prev, [name]: value }))
+    }
+
+    async function saveEdit() {
+        setEditError('')
+
+        const name = editing.name.trim()
+        const email = editing.email.trim().toLowerCase()
+        if (!name || !email) {
+            setEditError('Имя и email обязательны')
+            return
+        }
+        if (editing.password && editing.password.length < 6) {
+            setEditError('Пароль должен быть минимум 6 символов')
+            return
+        }
+
+        const payload = {
+            name,
+            email,
+            role: editing.role.toUpperCase(),
+            classGroup: editing.role === 'student' ? editing.classGroup.trim() : '',
+        }
+        if (editing.password.trim()) {
+            payload.password = editing.password.trim()
+        }
+
+        setEditSaving(true)
+        try {
+            const res = await authFetch(`/api/users/${editing.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(payload),
+            })
+            if (res.status === 409) {
+                setEditError('Пользователь с таким email уже есть')
+                return
+            }
+            if (!res.ok) {
+                setEditError(`Не удалось сохранить (HTTP ${res.status})`)
+                return
+            }
+            setEditing(null)
+            setMessage('Изменения сохранены')
+            await loadUsers()
+        } catch (e) {
+            setEditError('Ошибка соединения с сервером')
+        } finally {
+            setEditSaving(false)
         }
     }
 
@@ -275,6 +354,19 @@ export default function AdminPanel() {
                                     <option value="admin">Администратор</option>
                                 </select>
                             </label>
+
+                            {form.role === 'student' && (
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: t.text }}>
+                                    Группа
+                                    <input
+                                        name="classGroup"
+                                        value={form.classGroup}
+                                        onChange={handleChange}
+                                        placeholder="Например, 7А"
+                                        style={inputStyle}
+                                    />
+                                </label>
+                            )}
 
                             {(error || message) && (
                                 <div style={{
@@ -490,22 +582,39 @@ export default function AdminPanel() {
                                                     {account.group || '—'}
                                                 </td>
                                                 <td style={{ padding: '12px 14px', borderBottom: `1px solid ${t.border}` }}>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleDelete(account)}
-                                                        disabled={isCurrent}
-                                                        style={{
-                                                            padding: '7px 10px',
-                                                            borderRadius: 7,
-                                                            border: `1px solid ${isCurrent ? t.border : (isDark ? '#5A2A2A' : '#FED7D7')}`,
-                                                            background: isCurrent ? 'transparent' : (isDark ? '#2E1A1A' : '#FFF5F5'),
-                                                            color: isCurrent ? t.textSecondary : (isDark ? '#F28B82' : '#C53030'),
-                                                            fontSize: 12,
-                                                            cursor: isCurrent ? 'not-allowed' : 'pointer',
-                                                        }}
-                                                    >
-                                                        Удалить
-                                                    </button>
+                                                    <div style={{ display: 'flex', gap: 6 }}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openEdit(account)}
+                                                            style={{
+                                                                padding: '7px 10px',
+                                                                borderRadius: 7,
+                                                                border: `1px solid ${t.border}`,
+                                                                background: isDark ? '#1E1F2E' : '#F4F6FA',
+                                                                color: t.text,
+                                                                fontSize: 12,
+                                                                cursor: 'pointer',
+                                                            }}
+                                                        >
+                                                            Изменить
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDelete(account)}
+                                                            disabled={isCurrent}
+                                                            style={{
+                                                                padding: '7px 10px',
+                                                                borderRadius: 7,
+                                                                border: `1px solid ${isCurrent ? t.border : (isDark ? '#5A2A2A' : '#FED7D7')}`,
+                                                                background: isCurrent ? 'transparent' : (isDark ? '#2E1A1A' : '#FFF5F5'),
+                                                                color: isCurrent ? t.textSecondary : (isDark ? '#F28B82' : '#C53030'),
+                                                                fontSize: 12,
+                                                                cursor: isCurrent ? 'not-allowed' : 'pointer',
+                                                            }}
+                                                        >
+                                                            Удалить
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         )
@@ -519,6 +628,134 @@ export default function AdminPanel() {
                     </section>
                 </div>
             </div>
+
+            {editing && (
+                <div
+                    onClick={() => !editSaving && setEditing(null)}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.45)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 100,
+                        padding: 16,
+                    }}
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                            background: isDark ? '#181926' : '#fff',
+                            border: `1px solid ${t.border}`,
+                            borderRadius: 12,
+                            padding: 20,
+                            width: '100%',
+                            maxWidth: 420,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 12,
+                            boxShadow: '0 10px 40px rgba(0,0,0,0.25)',
+                        }}
+                    >
+                        <h2 style={{ margin: 0, fontSize: 16, color: t.text }}>Изменить пользователя</h2>
+
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: t.text }}>
+                            Имя
+                            <input name="name" value={editing.name} onChange={handleEditChange} style={inputStyle} />
+                        </label>
+
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: t.text }}>
+                            Email
+                            <input name="email" type="email" value={editing.email} onChange={handleEditChange} style={inputStyle} />
+                        </label>
+
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: t.text }}>
+                            Новый пароль <span style={{ color: t.textSecondary, fontWeight: 400 }}>(оставьте пустым, чтобы не менять)</span>
+                            <input
+                                name="password"
+                                type="text"
+                                value={editing.password}
+                                onChange={handleEditChange}
+                                placeholder="—"
+                                style={inputStyle}
+                            />
+                        </label>
+
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: t.text }}>
+                            Роль
+                            <select name="role" value={editing.role} onChange={handleEditChange} style={inputStyle}>
+                                <option value="student">Ученик</option>
+                                <option value="teacher">Учитель</option>
+                                <option value="admin">Администратор</option>
+                            </select>
+                        </label>
+
+                        {editing.role === 'student' && (
+                            <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: t.text }}>
+                                Группа
+                                <input
+                                    name="classGroup"
+                                    value={editing.classGroup}
+                                    onChange={handleEditChange}
+                                    placeholder="Например, 7А"
+                                    style={inputStyle}
+                                />
+                            </label>
+                        )}
+
+                        {editError && (
+                            <div style={{
+                                padding: '9px 11px',
+                                borderRadius: 8,
+                                fontSize: 12,
+                                background: isDark ? '#2E1A1A' : '#FFF5F5',
+                                color: isDark ? '#F28B82' : '#C53030',
+                                border: `1px solid ${isDark ? '#5A2A2A' : '#FED7D7'}`,
+                            }}>
+                                {editError}
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+                            <button
+                                type="button"
+                                onClick={() => setEditing(null)}
+                                disabled={editSaving}
+                                style={{
+                                    padding: '9px 14px',
+                                    borderRadius: 8,
+                                    border: `1px solid ${t.border}`,
+                                    background: 'transparent',
+                                    color: t.text,
+                                    fontSize: 13,
+                                    cursor: editSaving ? 'wait' : 'pointer',
+                                }}
+                            >
+                                Отмена
+                            </button>
+                            <button
+                                type="button"
+                                onClick={saveEdit}
+                                disabled={editSaving}
+                                style={{
+                                    padding: '9px 14px',
+                                    borderRadius: 8,
+                                    border: 'none',
+                                    background: accent,
+                                    color: '#fff',
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    cursor: editSaving ? 'wait' : 'pointer',
+                                    opacity: editSaving ? 0.7 : 1,
+                                }}
+                            >
+                                {editSaving ? 'Сохранение…' : 'Сохранить'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
