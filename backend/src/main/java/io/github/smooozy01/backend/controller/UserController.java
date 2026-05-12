@@ -1,6 +1,7 @@
 package io.github.smooozy01.backend.controller;
 
 import io.github.smooozy01.backend.dto.request.CreateUserRequest;
+import io.github.smooozy01.backend.dto.request.UpdateUserRequest;
 import io.github.smooozy01.backend.dto.response.UserResponse;
 import io.github.smooozy01.backend.entity.Role;
 import io.github.smooozy01.backend.service.UserService;
@@ -40,6 +41,12 @@ public class UserController {
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse createStudent(@Valid @RequestBody CreateUserRequest req) {
         return service.create(req, Role.STUDENT);
+    }
+
+    @PutMapping("/{id}")
+    public UserResponse update(@PathVariable Long id,
+                               @Valid @RequestBody UpdateUserRequest req) {
+        return service.update(id, req);
     }
 
     @DeleteMapping("/{id}")
