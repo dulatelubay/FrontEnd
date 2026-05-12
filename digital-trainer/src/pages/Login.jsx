@@ -87,7 +87,7 @@ export default function Login() {
                         boxShadow: `0 4px 16px ${accent}44`,
                     }}>
                         <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-                            <path d="M3 6.5h20M3 13h13M3 19.5h16" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+                            <path d="M3 6.5h20M3 13h13M3 19.5h16" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/>
                         </svg>
                     </div>
                     <div style={{ fontSize: 20, fontWeight: 600, color: t.text, marginBottom: 4 }}>

@@ -1,4 +1,4 @@
-import { useState, Fragment } from 'react'
+import { useState, useEffect, useCallback, Fragment } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { themes } from '../styles/themes'
@@ -46,18 +46,39 @@ function getInitials(name) {
 }
 
 export default function AdminPanel() {
-    const { users, user, addUser, deleteUser } = useAuth()
+    const { user, authFetch } = useAuth()
     const { theme } = useTheme()
     const t = themes[theme]
     const isDark = theme === 'dark'
     const accent = isDark ? '#CBA6F7' : '#6B4FC8'
 
+    const [users, setUsers] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [submitting, setSubmitting] = useState(false)
     const [form, setForm] = useState(emptyForm)
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
     const [filter, setFilter] = useState('all')
 
-    const roleOrder = { teacher: 0, admin: 1, student: 2 }
+    const loadUsers = useCallback(async () => {
+        setLoading(true)
+        try {
+            const res = await authFetch('/api/users')
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            const data = await res.json()
+            setUsers(data)
+            setError('')
+        } catch (e) {
+            setError('Не удалось загрузить список пользователей')
+        } finally {
+            setLoading(false)
+        }
+    }, [authFetch])
+
+    useEffect(() => {
+        loadUsers()
+    }, [loadUsers])
+
     const filteredUsers = users
         .filter(account => filter === 'all' || account.role === filter)
         .slice()
@@ -78,32 +99,64 @@ export default function AdminPanel() {
         setForm(prev => ({ ...prev, [name]: value }))
     }
 
-    function handleSubmit(event) {
+    async function handleSubmit(event) {
         event.preventDefault()
         setError('')
         setMessage('')
 
-        const result = addUser(form)
-        if (!result.success) {
-            setError(result.error)
+        const name = form.name.trim()
+        const email = form.email.trim().toLowerCase()
+        const password = form.password.trim()
+        if (!name || !email || !password) {
+            setError('Заполните все поля')
+            return
+        }
+        if (password.length < 6) {
+            setError('Пароль должен быть минимум 6 символов')
             return
         }
 
-        setForm(emptyForm)
-        setMessage('Пользователь добавлен')
+        setSubmitting(true)
+        try {
+            const res = await authFetch('/api/users', {
+                method: 'POST',
+                body: JSON.stringify({ name, email, password, role: form.role.toUpperCase() }),
+            })
+            if (res.status === 409) {
+                setError('Пользователь с таким email уже есть')
+                return
+            }
+            if (!res.ok) {
+                setError(`Не удалось создать пользователя (HTTP ${res.status})`)
+                return
+            }
+            setForm(emptyForm)
+            setMessage('Пользователь создан')
+            await loadUsers()
+        } catch (e) {
+            setError('Ошибка соединения с сервером')
+        } finally {
+            setSubmitting(false)
+        }
     }
 
-    function handleDelete(account) {
+    async function handleDelete(account) {
         setError('')
         setMessage('')
 
-        const result = deleteUser(account.id)
-        if (!result.success) {
-            setError(result.error)
-            return
-        }
+        if (!confirm(`Удалить пользователя ${account.name}?`)) return
 
-        setMessage('Пользователь удалён')
+        try {
+            const res = await authFetch(`/api/users/${account.id}`, { method: 'DELETE' })
+            if (!res.ok) {
+                setError(`Не удалось удалить пользователя (HTTP ${res.status})`)
+                return
+            }
+            setMessage('Пользователь удалён')
+            await loadUsers()
+        } catch (e) {
+            setError('Ошибка соединения с сервером')
+        }
     }
 
     const inputStyle = {
@@ -238,6 +291,7 @@ export default function AdminPanel() {
 
                             <button
                                 type="submit"
+                                disabled={submitting}
                                 style={{
                                     padding: '11px 14px',
                                     borderRadius: 8,
@@ -246,10 +300,11 @@ export default function AdminPanel() {
                                     color: '#fff',
                                     fontSize: 13,
                                     fontWeight: 600,
-                                    cursor: 'pointer',
+                                    cursor: submitting ? 'wait' : 'pointer',
+                                    opacity: submitting ? 0.7 : 1,
                                 }}
                             >
-                                Добавить
+                                {submitting ? 'Создание…' : 'Добавить'}
                             </button>
                         </form>
                     </section>
@@ -305,7 +360,7 @@ export default function AdminPanel() {
                             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
                                 <thead>
                                     <tr style={{ background: isDark ? '#13141F' : '#F8FAFC' }}>
-                                        {['Пользователь', 'Email', 'Роль', 'Пароль', 'Действия'].map(header => (
+                                        {['Пользователь', 'Email', 'Роль', 'Группа', 'Действия'].map(header => (
                                             <th
                                                 key={header}
                                                 style={{
@@ -323,7 +378,19 @@ export default function AdminPanel() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredUsers.length === 0 && (
+                                    {loading && (
+                                        <tr>
+                                            <td colSpan={5} style={{
+                                                padding: '24px 14px',
+                                                textAlign: 'center',
+                                                color: t.textSecondary,
+                                                fontSize: 13,
+                                            }}>
+                                                Загрузка…
+                                            </td>
+                                        </tr>
+                                    )}
+                                    {!loading && filteredUsers.length === 0 && (
                                         <tr>
                                             <td colSpan={5} style={{
                                                 padding: '24px 14px',
@@ -420,7 +487,7 @@ export default function AdminPanel() {
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: '12px 14px', borderBottom: `1px solid ${t.border}`, color: t.textSecondary, fontSize: 13 }}>
-                                                    {account.password}
+                                                    {account.group || '—'}
                                                 </td>
                                                 <td style={{ padding: '12px 14px', borderBottom: `1px solid ${t.border}` }}>
                                                     <button
